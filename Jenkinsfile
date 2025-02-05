@@ -8,7 +8,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'AWS_SECRET_ACCESS_KEY' #This is what we'll name the Access Key ID in Jenkins. This will allow Jenkins to reference our AWS access keys in order to build infrastructure.
+                    credentialsId: 'AWS_SECRET_ACCESS_KEY' 
                 ]]) {
                     sh '''
                     echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
