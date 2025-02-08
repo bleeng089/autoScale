@@ -146,7 +146,7 @@ pipeline {
                                                 snykIssuesList = []
                                         } else {
                                                 def parsedIssues = new JsonSlurper().parseText(snykIssuesOutput)
-                                                snykIssuesList = parsedIssues.flatten().findAll { it != null && it.title != null }
+                                                snykIssuesList = parsedIssues.flatten().findAll { it != null && it.title != null }.collect { new HashMap(it) }
                                         }
                                         
                                         echo "DEBUG: snykIssuesList: ${snykIssuesList}"
@@ -179,6 +179,7 @@ pipeline {
                         }
                 }
         }
+
 
         stage('Aqua Trivy Security Scan') {
             steps {
