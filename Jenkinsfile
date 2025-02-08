@@ -85,7 +85,8 @@ pipeline {
                         sh "cat snyk-results.json"
 
                         // Extract issues as a proper JSON array
-                        sh "jq -c '.infrastructureAsCodeIssues | map({title, severity, impact, resolution})' snyk-results.json > snyk-issues-parsed.json"
+                        sh "jq -c 'map(select(.infrastructureAsCodeIssues != null) | .infrastructureAsCodeIssues | map({title, severity, impact, resolution}))' snyk-results.json > snyk-issues-parsed.json"
+
 
                         // Read the extracted JSON
                         def snykIssuesList = readJSON(file: "snyk-issues-parsed.json")
