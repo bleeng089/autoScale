@@ -70,7 +70,7 @@ pipeline {
                 }
             }
         }
-
+/*
         stage('Snyk Security Scan') {
             steps {
                 script {
@@ -120,7 +120,62 @@ pipeline {
                 }
             }
         }
+*/
 
+
+        stage('Snyk Security Scan') {
+                steps {
+                        script {
+                                withCredentials([string(credentialsId: 'SNYK_AUTH_TOKEN_ID', variable: 'SNYK_TOKEN')]) {
+                                        sh 'export SNYK_TOKEN=${SNYK_TOKEN}'
+
+                                        // Run Snyk scan and save output to a file
+                                        def snykScanStatus = sh(script: "snyk iac test --json --severity-threshold=low > snyk-results.json || echo 'Scan completed'", returnStatus: true)
+                                        echo "Snyk Scan Status: ${snykScanStatus}"
+
+                                        // Print the full JSON for debugging
+                                        sh "cat snyk-results.json"
+
+                                        // Extract issues as a proper JSON array
+                                        def snykIssuesOutput = sh(script: "jq -c 'map(select(.infrastructureAsCodeIssues != null) | .infrastructureAsCodeIssues | map({title, severity, impact, resolution}))' snyk-results.json", returnStdout: true).trim()
+                                        
+                                        // Handle empty issues case
+                                        if (snykIssuesOutput == '[]') {
+                                                echo "DEBUG: No infrastructure as code issues found."
+                                                snykIssuesList = []
+                                        } else {
+                                                snykIssuesList = new JsonSlurper().parseText(snykIssuesOutput)
+                                        }
+                                        
+                                        echo "DEBUG: Total Snyk Issues Found: ${snykIssuesList.size()}"
+
+                                        if (snykIssuesList.size() > 0) {
+                                                for (issue in snykIssuesList) {
+                                                        echo "DEBUG: Processing Issue: ${issue}"
+
+                                                        def issueTitle = "Snyk Issue: ${issue.title} - Severity: ${issue.severity}"
+                                                        def issueDescription = """
+                                                        Impact: ${issue.impact}
+                                                        Resolution: ${issue.resolution}
+                                                        """
+
+                                                        echo "Creating Jira Ticket for: ${issueTitle}"
+                                                        echo "Description:\n${issueDescription}"
+
+                                                        // Call Jira ticket creation function
+                                                        def jiraIssueKey = createJiraTicket(issueTitle, issueDescription)
+                                                        echo "Jira Ticket Created: ${jiraIssueKey}"
+
+                                                        // Mark the scan as failed if a Jira ticket is created
+                                                        env.SCAN_FAILED = "true"
+                                                }
+                                        } else {
+                                                echo "DEBUG: No issues to process."
+                                        }
+                                }
+                        }
+                }
+        }
 
 
         stage('Aqua Trivy Security Scan') {
