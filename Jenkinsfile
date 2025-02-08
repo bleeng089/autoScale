@@ -123,7 +123,6 @@ pipeline {
         }
 */
 
-
         stage('Snyk Security Scan') {
                 steps {
                         script {
@@ -147,7 +146,7 @@ pipeline {
                                                 snykIssuesList = []
                                         } else {
                                                 def parsedIssues = new JsonSlurper().parseText(snykIssuesOutput)
-                                                snykIssuesList = parsedIssues.collect { it as Map }
+                                                snykIssuesList = parsedIssues.flatten().findAll { it != null && it.title != null }
                                         }
                                         
                                         echo "DEBUG: snykIssuesList: ${snykIssuesList}"
