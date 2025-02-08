@@ -146,7 +146,7 @@ pipeline {
                                                 echo "DEBUG: No infrastructure as code issues found."
                                                 snykIssuesList = []
                                         } else {
-                                                def parsedIssues = new groovy.json.JsonSlurper().parseText(snykIssuesOutput)
+                                                def parsedIssues = new groovy.json.JsonSlurper().parseText(snykIssuesOutput) //uses import groovy.json.JsonSlurper
                                                 snykIssuesList = parsedIssues.collect { it as Map }
                                         }
                                         
