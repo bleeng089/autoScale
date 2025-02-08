@@ -122,7 +122,6 @@ pipeline {
             }
         }
 */
-        // CODE WORKED
         stage('Snyk Security Scan') {
                 steps {
                         script {
@@ -136,8 +135,10 @@ pipeline {
                                         // Print the full JSON for debugging
                                         sh "cat snyk-results.json"
 
-                                        // Extract issues as a proper JSON array
-                                        def snykIssuesOutput = sh(script: "jq -c 'map(select(.infrastructureAsCodeIssues != null) | .infrastructureAsCodeIssues | map({title, severity, impact, resolution}))' snyk-results.json", returnStdout: true).trim()
+                                        // Extract issues as a proper JSON array only if infrastructureAsCodeIssues exists
+                                        def snykIssuesOutput = sh(script: '''
+                                                jq -c 'if .infrastructureAsCodeIssues then .infrastructureAsCodeIssues | map({title, severity, impact, resolution}) else [] end' snyk-results.json
+                                        ''', returnStdout: true).trim()
                                         echo "DEBUG: snykIssuesOutput: ${snykIssuesOutput}"
                                         
                                         // Handle empty issues case
@@ -145,8 +146,8 @@ pipeline {
                                                 echo "DEBUG: No infrastructure as code issues found."
                                                 snykIssuesList = []
                                         } else {
-                                                def parsedIssues = new JsonSlurper().parseText(snykIssuesOutput)
-                                                snykIssuesList = parsedIssues.flatten().findAll { it != null && it.title != null }.collect { new HashMap(it) }
+                                                def parsedIssues = new groovy.json.JsonSlurper().parseText(snykIssuesOutput)
+                                                snykIssuesList = parsedIssues.collect { it as Map }
                                         }
                                         
                                         echo "DEBUG: snykIssuesList: ${snykIssuesList}"
@@ -179,7 +180,6 @@ pipeline {
                         }
                 }
         }
-
 
         stage('Aqua Trivy Security Scan') {
             steps {
