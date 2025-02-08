@@ -73,7 +73,7 @@ resource "aws_security_group" "example_sg" {
 
 # Define an EC2 instance
 resource "aws_instance" "example" {
-  ami                         = "ami-0c55b159cbfafe1f0"  # Use a valid AMI ID for your region
+  ami                         = "ami-085ad6ae776d8f09c"  # Use a valid AMI ID for your region
   instance_type               = "t2.micro"
   subnet_id                   = aws_subnet.example_subnet.id
   security_groups             = [aws_security_group.example_sg.name]
