@@ -180,7 +180,7 @@ pipeline {
                 }
         }
 
-/*
+
         stage('Aqua Trivy Security Scan') {
             steps {
                 script {
@@ -224,7 +224,7 @@ pipeline {
                 }
             }
         }
-*/
+
         stage('Fail Pipeline if Any Scan Fails') {
             steps {
                 script {
