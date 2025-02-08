@@ -23,7 +23,7 @@ resource "aws_iam_role" "ec2_instance_connect_role" {
 # Attach the EC2 Instance Connect policy to the IAM role
 resource "aws_iam_role_policy_attachment" "ec2_instance_connect_policy_attachment" {
   role       = aws_iam_role.ec2_instance_connect_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2RoleforSSM"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 # Define a VPC
