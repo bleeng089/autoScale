@@ -123,7 +123,6 @@ pipeline {
         }
 */
 
-
         stage('Snyk Security Scan') {
                 steps {
                         script {
@@ -145,7 +144,8 @@ pipeline {
                                                 echo "DEBUG: No infrastructure as code issues found."
                                                 snykIssuesList = []
                                         } else {
-                                                snykIssuesList = new JsonSlurper().parseText(snykIssuesOutput)
+                                                def parsedIssues = new JsonSlurper().parseText(snykIssuesOutput)
+                                                snykIssuesList = parsedIssues.collect { it as Map }
                                         }
                                         
                                         echo "DEBUG: Total Snyk Issues Found: ${snykIssuesList.size()}"
