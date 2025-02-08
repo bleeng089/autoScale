@@ -150,7 +150,7 @@ pipeline {
                                         
                                         echo "DEBUG: Total Snyk Issues Found: ${snykIssuesList.size()}"
 
-                                        if (snykIssuesList.size() > 0) {
+                                        if (snykIssuesList?.size() > 0) {
                                                 for (issue in snykIssuesList) {
                                                         echo "DEBUG: Processing Issue: ${issue}"
 
@@ -177,7 +177,6 @@ pipeline {
                         }
                 }
         }
-
 
         stage('Aqua Trivy Security Scan') {
             steps {
