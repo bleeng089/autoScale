@@ -71,7 +71,7 @@ pipeline {
                 }
             }
         }
-/*
+/*      // CODE DID NOT WORK
         stage('Snyk Security Scan') {
             steps {
                 script {
@@ -122,7 +122,7 @@ pipeline {
             }
         }
 */
-
+        // CODE WORKED
         stage('Snyk Security Scan') {
                 steps {
                         script {
@@ -180,7 +180,7 @@ pipeline {
                 }
         }
 
-
+/*
         stage('Aqua Trivy Security Scan') {
             steps {
                 script {
@@ -224,7 +224,7 @@ pipeline {
                 }
             }
         }
-
+*/
         stage('Fail Pipeline if Any Scan Fails') {
             steps {
                 script {
