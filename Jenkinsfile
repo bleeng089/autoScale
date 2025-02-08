@@ -52,7 +52,7 @@ pipeline {
 
                             def sonarIssues = sh(script: '''
                                 curl -s -u ${SONAR_TOKEN}: \
-                                "${SONARQUBE_URL}/api/issues/search?componentKeys=derrickSh43_basic&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
+                                "${SONARQUBE_URL}/api/issues/search?componentKeys=bleeng089_autoScale&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
                             ''', returnStdout: true).trim()
 
                             if (!sonarIssues.contains("No issues found")) {
@@ -268,7 +268,7 @@ def createJiraTicket(String issueTitle, String issueDescription) {
                 def searchResponse = sh(script: '''
                     export JIRA_CREDS
                     curl -s -u "$JIRA_CREDS" \
-                    -X GET "https://derrickweil.atlassian.net/rest/api/3/search?jql=''' + searchQuery + '''" \
+                    -X GET "https://walidahmm.atlassian.net/rest/api/3/search?jql=''' + searchQuery + '''" \
                     -H "Accept: application/json"
                 ''', returnStdout: true).trim()
 
@@ -284,7 +284,7 @@ def createJiraTicket(String issueTitle, String issueDescription) {
                 // **Step 3: Create a new Jira issue securely**
                 def createResponse = sh(script: '''
                     export JIRA_CREDS
-                    curl -X POST "https://derrickweil.atlassian.net/rest/api/3/issue" \
+                    curl -X POST "https://walidahmm.atlassian.net/rest/api/3/issue" \
                     -u "$JIRA_CREDS" \
                     -H "Content-Type: application/json" \
                     --data @jira_payload.json
