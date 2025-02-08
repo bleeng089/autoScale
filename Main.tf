@@ -76,7 +76,7 @@ resource "aws_instance" "example" {
   ami                         = "ami-0c55b159cbfafe1f0"  # Use a valid AMI ID for your region
   instance_type               = "t2.micro"
   subnet_id                   = aws_subnet.example_subnet.id
-  security_group_ids          = [aws_security_group.example_sg.id]
+  vpc_security_group_ids      = [aws_security_group.example_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_connect_profile.name
   associate_public_ip_address = false  # Do not associate a public IP
 
