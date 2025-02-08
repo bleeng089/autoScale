@@ -79,6 +79,7 @@ resource "aws_instance" "example" {
   vpc_security_group_ids      = [aws_security_group.example_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_connect_profile.name
   associate_public_ip_address = false  # Do not associate a public IP
+  depends_on                  = [aws_iam_instance_profile.ec2_instance_connect_profile]  # Ensure instance profile is created first
 
   tags = {
     Name = "ExampleInstance"
