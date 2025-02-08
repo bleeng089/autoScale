@@ -123,6 +123,7 @@ pipeline {
         }
 */
 
+
         stage('Snyk Security Scan') {
                 steps {
                         script {
@@ -138,6 +139,7 @@ pipeline {
 
                                         // Extract issues as a proper JSON array
                                         def snykIssuesOutput = sh(script: "jq -c 'map(select(.infrastructureAsCodeIssues != null) | .infrastructureAsCodeIssues | map({title, severity, impact, resolution}))' snyk-results.json", returnStdout: true).trim()
+                                        echo "DEBUG: snykIssuesOutput: ${snykIssuesOutput}"
                                         
                                         // Handle empty issues case
                                         if (snykIssuesOutput == '[]') {
@@ -148,16 +150,17 @@ pipeline {
                                                 snykIssuesList = parsedIssues.collect { it as Map }
                                         }
                                         
-                                        echo "DEBUG: Total Snyk Issues Found: ${snykIssuesList.size()}"
+                                        echo "DEBUG: snykIssuesList: ${snykIssuesList}"
+                                        echo "DEBUG: Total Snyk Issues Found: ${snykIssuesList?.size()}"
 
                                         if (snykIssuesList?.size() > 0) {
                                                 for (issue in snykIssuesList) {
                                                         echo "DEBUG: Processing Issue: ${issue}"
 
-                                                        def issueTitle = "Snyk Issue: ${issue.title} - Severity: ${issue.severity}"
+                                                        def issueTitle = "Snyk Issue: ${issue?.title} - Severity: ${issue?.severity}"
                                                         def issueDescription = """
-                                                        Impact: ${issue.impact}
-                                                        Resolution: ${issue.resolution}
+                                                        Impact: ${issue?.impact}
+                                                        Resolution: ${issue?.resolution}
                                                         """
 
                                                         echo "Creating Jira Ticket for: ${issueTitle}"
