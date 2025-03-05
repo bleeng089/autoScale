@@ -1,365 +1,262 @@
-import groovy.json.JsonSlurper
+// pipeline {
+//     agent any
+//     environment {
+//         AWS_REGION = 'us-east-1' 
+//     }
+//     stages {
+//         stage('Set AWS Credentials') {
+//             steps {
+//                 withCredentials([[
+//                     $class: 'AmazonWebServicesCredentialsBinding',
+//                     credentialsId: 'AWS' 
+//                 ]]) {
+//                     sh '''
+//                     echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
+//                     aws sts get-caller-identity
+//                     '''
+//                 }
+//             }
+//         }
+//         stage('Checkout Code') {
+//             steps {
+//                 git branch: 'main', url: 'https://github.com/Bassdanger/autoScale' 
+//             }
+//         }
+//         stage('Initialize Terraform') {
+//             steps {
+//                 sh '''
+//                 terraform init
+//                 '''
+//             }
+//         }
+//         stage('Plan Terraform') {
+//             steps {
+//                 withCredentials([[
+//                     $class: 'AmazonWebServicesCredentialsBinding',
+//                     credentialsId: 'AWS'
+//                 ]]) {
+//                     sh '''
+//                     export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+//                     export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+//                     terraform plan -out=tfplan
+//                     '''
+//                 }
+//             }
+//         }
+//         stage('Apply Terraform') {
+//             steps {
+//                 input message: "Approve Terraform Apply?", ok: "Deploy"
+//                 withCredentials([[
+//                     $class: 'AmazonWebServicesCredentialsBinding',
+//                     credentialsId: 'AWS'
+//                 ]]) {
+//                     sh '''
+//                     export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+//                     export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+//                     terraform apply -auto-approve tfplan
+//                     '''
+//                 }
+//             }
+//         }
+//     }
+//     post {
+//         success {
+//             echo 'Terraform deployment completed successfully!'
+//         }
+//         failure {
+//             echo 'Terraform deployment failed!'
+//         }
+//     }
+// }
+pipeline{
+    agent any
+    tools {
+        jfrog 'jfrog-cli'
+    }
+    stages {
+        stage ('Testing') {
+            steps {
+                jf '-v' 
+                jf 'c show'
+                jf 'rt ping'
+                sh 'touch test-file'
+                jf 'rt u test-file jfrog-cli/'
+                jf 'rt bp'
+                jf 'rt dl jfrog-cli/test-file'
+            }
+        } 
+    }
+}
+
+
+
+
+
+
+
+Let’s break down this Jenkins pipeline step-by-step to understand what it’s doing. This pipeline integrates with JFrog Artifactory using the JFrog CLI, performs some basic operations, and interacts with an Artifactory repository. Here’s the detailed explanation:
+
+---
+
+### Pipeline Structure
+```groovy
 pipeline {
     agent any
-
-    environment {
-        AWS_REGION = 'us-east-1'
-        SONARQUBE_URL = "https://sonarcloud.io"
-        JIRA_SITE = "https://walidahmm.atlassian.net"
-        JIRA_PROJECT = "JENKINS"
+    tools {
+        jfrog 'jfrog-cli'
     }
-
     stages {
-        stage('Set AWS Credentials') {
+        stage('Testing') {
             steps {
-                withCredentials([aws(credentialsId: 'AWS_SECRET_ACCESS_KEY', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
-                    echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-                    aws sts get-caller-identity
-                    '''
-                }
-            }
-        }
-
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/bleeng089/autoScale.git'
-            }
-        }
-        stage('Test Jira Ticket Creation') {
-            steps {
-                script {
-                    echo "Testing Jira ticket creation from Jenkins pipeline..."
-                    createJiraTicket("Jenkins Pipeline Test", "This is a test issue created from Jenkins to validate Jira integration.")
-                }
-            }
-        }
-
-        stage('Static Code Analysis (SAST)') {
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'SONARQUBE_TOKEN_ID', variable: 'SONAR_TOKEN')]) {
-
-                        // Run SonarQube Scan
-                        def scanStatus = sh(script: '''
-                            ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                            -Dsonar.projectKey=bleeng089_autoScale \
-                            -Dsonar.organization=bleeng089 \
-                            -Dsonar.host.url=${SONARQUBE_URL} \
-                            -Dsonar.login=${SONAR_TOKEN}
-                        ''', returnStatus: true)
-
-                        if (scanStatus != 0) {
-
-                            def sonarIssues = sh(script: '''
-                                curl -s -u ${SONAR_TOKEN}: \
-                                "${SONARQUBE_URL}/api/issues/search?componentKeys=bleeng089_autoScale&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
-                            ''', returnStdout: true).trim()
-
-                            if (!sonarIssues.contains("No issues found")) {
-                                def issueDescription = """ 
-                                    **SonarCloud Security Issues:**
-                                    ${sonarIssues}
-                                """.stripIndent()
-
-                                echo "Creating Jira Ticket for SonarCloud issues..."
-                                createJiraTicket("SonarQube Security Vulnerabilities Detected", issueDescription)
-                                error("SonarQube found security vulnerabilities! Pipeline stopping.")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-/*      // CODE DID NOT WORK
-        stage('Snyk Security Scan') {
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'SNYK_AUTH_TOKEN_ID', variable: 'SNYK_TOKEN')]) {
-                        sh 'export SNYK_TOKEN=${SNYK_TOKEN}'
-
-                        // Run Snyk scan and save output to a file
-                        def snykScanStatus = sh(script: "snyk iac test --json --severity-threshold=low > snyk-results.json || echo 'Scan completed'", returnStatus: true)
-                        echo "Snyk Scan Status: ${snykScanStatus}"
-
-                        // Print the full JSON for debugging
-                        sh "cat snyk-results.json"
-
-                        // Extract issues as a proper JSON array
-                        sh "jq -c 'map(select(.infrastructureAsCodeIssues != null) | .infrastructureAsCodeIssues | map({title, severity, impact, resolution}))' snyk-results.json > snyk-issues-parsed.json"
-
-
-                        // Read the extracted JSON
-                        def snykIssuesList = readJSON(file: "snyk-issues-parsed.json")
-
-                        echo "DEBUG: Total Snyk Issues Found: ${snykIssuesList.size()}"
-
-                        if (snykIssuesList.size() > 0) {
-                            for (issue in snykIssuesList) {
-                                echo "DEBUG: Processing Issue: ${issue}"
-
-                                def issueTitle = "Snyk Issue: ${issue.title} - Severity: ${issue.severity}"
-                                def issueDescription = """
-                                Impact: ${issue.impact}
-                                Resolution: ${issue.resolution}
-                                """
-
-                                echo "Creating Jira Ticket for: ${issueTitle}"
-                                echo "Description:\n${issueDescription}"
-
-                                // Call Jira ticket creation function
-                                def jiraIssueKey = createJiraTicket(issueTitle, issueDescription)
-                                echo "Jira Ticket Created: ${jiraIssueKey}"
-
-                                // Mark the scan as failed if a Jira ticket is created
-                                env.SCAN_FAILED = "true"
-                            }
-                        } else {
-                            echo "DEBUG: No issues to process."
-                        }
-                    }
-                }
-            }
-        }
-*/
-        stage('Snyk Security Scan') {
-                steps {
-                        script {
-                                withCredentials([string(credentialsId: 'SNYK_AUTH_TOKEN_ID', variable: 'SNYK_TOKEN')]) {
-                                        sh 'export SNYK_TOKEN=${SNYK_TOKEN}'
-
-                                        // Run Snyk scan and save output to a file
-                                        def snykScanStatus = sh(script: "snyk iac test --json --severity-threshold=low > snyk-results.json || echo 'Scan completed'", returnStatus: true)
-                                        echo "Snyk Scan Status: ${snykScanStatus}"
-
-                                        // Print the full JSON for debugging
-                                        sh "cat snyk-results.json"
-
-                                        // Extract issues as a proper JSON array only if infrastructureAsCodeIssues exists
-                                        def snykIssuesOutput = sh(script: '''
-                                                jq -c 'if .infrastructureAsCodeIssues then .infrastructureAsCodeIssues | map({title, severity, impact, resolution}) else [] end' snyk-results.json
-                                        ''', returnStdout: true).trim()
-                                        echo "DEBUG: snykIssuesOutput: ${snykIssuesOutput}"
-                                        
-                                        // Handle empty issues case
-                                        if (snykIssuesOutput == '[]') {
-                                                echo "DEBUG: No infrastructure as code issues found."
-                                                snykIssuesList = []
-                                        } else {
-                                                def parsedIssues = new groovy.json.JsonSlurper().parseText(snykIssuesOutput) //uses import groovy.json.JsonSlurper
-                                                snykIssuesList = parsedIssues.collect { it as Map }
-                                        }
-                                        
-                                        echo "DEBUG: snykIssuesList: ${snykIssuesList}"
-                                        echo "DEBUG: Total Snyk Issues Found: ${snykIssuesList?.size()}"
-
-                                        if (snykIssuesList?.size() > 0) {
-                                                for (issue in snykIssuesList) {
-                                                        echo "DEBUG: Processing Issue: ${issue}"
-
-                                                        def issueTitle = "Snyk Issue: ${issue?.title} - Severity: ${issue?.severity}"
-                                                        def issueDescription = """
-                                                        Impact: ${issue?.impact}
-                                                        Resolution: ${issue?.resolution}
-                                                        """
-
-                                                        echo "Creating Jira Ticket for: ${issueTitle}"
-                                                        echo "Description:\n${issueDescription}"
-
-                                                        // Call Jira ticket creation function
-                                                        def jiraIssueKey = createJiraTicket(issueTitle, issueDescription)
-                                                        echo "Jira Ticket Created: ${jiraIssueKey}"
-
-                                                        // Mark the scan as failed if a Jira ticket is created
-                                                        env.SCAN_FAILED = "true"
-                                                }
-                                        } else {
-                                                echo "DEBUG: No issues to process."
-                                        }
-                                }
-                        }
-                }
-        }
-
-        stage('Aqua Trivy Security Scan') {
-            steps {
-                script {
-                    def trivyScanStatus = sh(script: '''
-                        trivy config -f json . | tee trivy-report.json || true
-                    ''', returnStatus: true)
-
-                    if (!fileExists('trivy-report.json')) {
-                        echo "Trivy report not found. Skipping analysis."
-                        return
-                    }
-
-                    // Extract issues as JSON
-                    def trivyIssues = sh(script: '''
-                        jq -c '.Results[].Misconfigurations[] | {title: .ID, severity: .Severity, description: .Description, resolution: .Resolution}' trivy-report.json || echo ''
-                    ''', returnStdout: true).trim().split("\n")
-
-                    if (trivyIssues.size() > 0 && trivyIssues[0].trim() != "") {
-                        echo "Security vulnerabilities detected by Trivy!"
-
-                        for (issue in trivyIssues) {
-                            echo "Processing Trivy Issue: ${issue}"
-
-                            def parsedIssue = readJSON(text: issue)
-                            def issueTitle = "Trivy Issue: ${parsedIssue.title} - Severity: ${parsedIssue.severity}"
-                            def issueDescription = """
-                            Description: ${parsedIssue.description}
-                            Resolution: ${parsedIssue.resolution}
-                            """
-
-                            echo "Creating Jira Ticket for: ${issueTitle}"
-                            def jiraIssueKey = createJiraTicket(issueTitle, issueDescription)
-                            echo "Jira Ticket Created: ${jiraIssueKey}"
-
-                            // Mark scan as failed if a Jira ticket is created
-                            env.SCAN_FAILED = "true"
-                        }
-                    } else {
-                        echo "No security vulnerabilities detected by Trivy."
-                    }
-                }
-            }
-        }
-
-        stage('Fail Pipeline if Any Scan Fails') {
-            steps {
-                script {
-                    if (env.SCAN_FAILED?.trim() == "true") {
-                        echo "Security scans detected vulnerabilities! Stopping the pipeline."
-                        error("Security vulnerabilities detected! See Jira tickets for details.")
-                    } else {
-                        echo "All security scans passed successfully."
-                    }
-                }
-            }
-        }
-
-
-        stage('Initialize Terraform') {
-            steps {
-                sh 'terraform init'
-            }
-        }
-
-        stage('Plan Terraform') {
-            steps {
-                withCredentials([aws(credentialsId: 'AWS_SECRET_ACCESS_KEY', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    terraform plan -out=tfplan
-                    '''
-                }
-            }
-        }
-
-        stage('Apply Terraform') {
-            steps {
-                input message: "Approve Terraform Apply?", ok: "Deploy"
-                withCredentials([aws(credentialsId: 'AWS_SECRET_ACCESS_KEY', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    terraform apply -auto-approve tfplan
-                    '''
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'Terraform deployment completed successfully!'
-        }
-
-        failure {
-            echo 'Terraform deployment failed!'
-        }
-    }
-}
-
-def createJiraTicket(String issueTitle, String issueDescription) {
-    script {
-        withCredentials([
-            string(credentialsId: 'JIRA_API_TOKEN', variable: 'JIRA_TOKEN'),
-            string(credentialsId: 'JIRA_EMAIL', variable: 'JIRA_USER')
-        ]) {
-            
-            def formattedDescription = issueDescription
-                .replaceAll('"', '\\"')  
-                .replaceAll("\n", "\\n") 
-                .replaceAll("\r", "")    
-
-            def jiraPayload = """
-            {
-                "fields": {
-                    "project": { "key": "JENKINS" },
-                    "summary": "${issueTitle}",
-                    "description": {
-                        "type": "doc",
-                        "version": 1,
-                        "content": [
-                            {
-                                "type": "paragraph",
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": "${formattedDescription}"
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    "issuetype": { "name": "Bug" }
-                }
-            }
-            """
-
-            writeFile file: 'jira_payload.json', text: jiraPayload
-
-            withEnv(["JIRA_CREDS=${JIRA_USER}:${JIRA_TOKEN}"]) {
-                // **Step 1: Search for an existing Jira ticket securely**
-                def searchQuery = URLEncoder.encode("project=JENKINS AND summary~\"${issueTitle}\" AND status != Done", "UTF-8")
-                def searchResponse = sh(script: '''
-                    export JIRA_CREDS
-                    curl -s -u "$JIRA_CREDS" \
-                    -X GET "https://walidahmm.atlassian.net/rest/api/3/search?jql=''' + searchQuery + '''" \
-                    -H "Accept: application/json"
-                ''', returnStdout: true).trim()
-
-                def existingIssues = readJSON(text: searchResponse)
-
-                if (existingIssues.issues.size() > 0) {
-                    echo "Jira issue already exists: ${existingIssues.issues[0].key}. Skipping ticket creation."
-                    return existingIssues.issues[0].key
-                }
-
-                echo "No existing Jira issue found. Creating a new ticket..."
-
-                // **Step 3: Create a new Jira issue securely**
-                def createResponse = sh(script: '''
-                    export JIRA_CREDS
-                    curl -X POST "https://walidahmm.atlassian.net/rest/api/3/issue" \
-                    -u "$JIRA_CREDS" \
-                    -H "Content-Type: application/json" \
-                    --data @jira_payload.json
-                ''', returnStdout: true).trim()
-
-                echo "Jira Response: ${createResponse}"
-
-                def createdIssue = readJSON(text: createResponse)
-
-                if (!createdIssue.containsKey("key")) {
-                    error("Jira ticket creation failed! Response: ${createResponse}")
-                }
-
-                return createdIssue.key
+                jf '-v'
+                jf 'c show'
+                jf 'rt ping'
+                sh 'touch test-file'
+                jf 'rt u test-file jfrog-cli/'
+                jf 'rt bp'
+                jf 'rt dl jfrog-cli/test-file'
             }
         }
     }
 }
 
+
+
+
+// ### Breakdown of Each Section
+
+// #### 1. `agent any`
+// - **What it does**: Specifies that this pipeline can run on any available Jenkins agent (no specific requirements like a Docker image or labeled node).
+// - **Implication**: The agent must have the JFrog CLI installed or configured via the `tools` block.
+
+// #### 2. `tools { jfrog 'jfrog-cli' }`
+// - **What it does**: Declares that the pipeline uses the JFrog CLI tool, with the identifier `'jfrog-cli'`. This is a Jenkins-specific configuration that ensures the JFrog CLI is available in the agent’s PATH.
+// - **Implication**: The `'jfrog-cli'` must be a pre-configured tool in Jenkins’ global configuration (Manage Jenkins > Global Tool Configuration). Jenkins will automatically download and set it up if it’s not already present on the agent.
+
+// #### 3. `stages { stage('Testing') { ... } }`
+// - **What it does**: Defines a single stage called "Testing" that contains all the steps to be executed.
+// - **Implication**: This is a logical grouping of tasks, typically used for reporting or visualization in Jenkins’ UI (e.g., Blue Ocean).
+
+// #### 4. `steps { ... }`
+// - Here’s where the actual work happens. Let’s analyze each step:
+
+// ##### a. `jf '-v'`
+// - **Command**: `jfrog -v`
+// - **What it does**: Runs the JFrog CLI with the `-v` flag to display its version.
+// - **Purpose**: Verifies that the JFrog CLI is installed and working on the agent.
+// - **Output**: Something like `jfrog version 2.x.x`.
+
+// ##### b. `jf 'c show'`
+// - **Command**: `jfrog config show`
+// - **What it does**: Displays the current JFrog CLI configuration (e.g., server URLs, credentials, repositories).
+// - **Purpose**: Confirms that the CLI is configured to connect to an Artifactory instance. This assumes a configuration was previously set up (e.g., via `jfrog config add` outside this pipeline or in a prior step not shown).
+// - **Output**: A list of configured servers and their details (e.g., URL, user, token).
+
+// ##### c. `jf 'rt ping'`
+// - **Command**: `jfrog rt ping`
+// - **What it does**: Pings the Artifactory server configured in the CLI to check connectivity.
+// - **Purpose**: Ensures the agent can communicate with the Artifactory instance.
+// - **Output**: `OK` if successful, or an error if the server is unreachable or misconfigured.
+
+// ##### d. `sh 'touch test-file'`
+// - **Command**: `touch test-file`
+// - **What it does**: Creates an empty file named `test-file` in the current working directory of the Jenkins workspace.
+// - **Purpose**: Generates a simple file to use in subsequent Artifactory operations (upload/download).
+
+// ##### e. `jf 'rt u test-file jfrog-cli/'`
+// - **Command**: `jfrog rt upload test-file jfrog-cli/`
+// - **What it does**: Uploads the `test-file` from the workspace to an Artifactory repository under the path `jfrog-cli/`.
+// - **Details**:
+//   - `rt u` is shorthand for `jfrog rt upload`.
+//   - `test-file` is the source file.
+//   - `jfrog-cli/` is the target path in Artifactory (assumes a repository is specified in the CLI config).
+// - **Purpose**: Tests the ability to upload artifacts to Artifactory.
+// - **Implication**: The repository (e.g., `jfrog-cli`) must exist and be writable in the configured Artifactory instance.
+
+// ##### f. `jf 'rt bp'`
+// - **Command**: `jfrog rt build-publish`
+// - **What it does**: Publishes build information to Artifactory, associating uploaded artifacts (like `test-file`) with the current build.
+// - **Details**:
+//   - Requires a build name and number, which might be implicitly set by Jenkins (e.g., via the Artifactory plugin) or explicitly via environment variables like `BUILD_NAME` and `BUILD_NUMBER`.
+// - **Purpose**: Links the pipeline’s artifacts to a build record in Artifactory for traceability.
+// - **Implication**: If no build info is configured, this might fail or do nothing unless pre-set (e.g., via `jfrog rt build-add-dependencies` or Jenkins integration).
+
+// ##### g. `jf 'rt dl jfrog-cli/test-file'`
+// - **Command**: `jfrog rt download jfrog-cli/test-file`
+// - **What it does**: Downloads the `test-file` from the `jfrog-cli/` path in Artifactory back to the workspace.
+// - **Purpose**: Verifies that the file can be retrieved from Artifactory after upload.
+// - **Output**: The `test-file` reappears in the workspace (possibly overwriting the original if not cleaned up).
+
+// ---
+
+// ### What This Pipeline Does Overall
+// This Jenkins pipeline is a simple test or proof-of-concept for interacting with JFrog Artifactory using the JFrog CLI. Here’s the sequence of actions:
+// 1. **Setup**: Ensures the JFrog CLI is available and configured.
+// 2. **Validation**: Checks the CLI version, configuration, and Artifactory connectivity.
+// 3. **Artifact Lifecycle**:
+//    - Creates a dummy file (`test-file`).
+//    - Uploads it to Artifactory under `jfrog-cli/`.
+//    - Publishes build metadata.
+//    - Downloads the file back to verify the round trip.
+// 4. **Purpose**: Likely used to:
+//    - Test JFrog CLI integration with Jenkins.
+//    - Validate Artifactory connectivity and permissions.
+//    - Demonstrate basic artifact management (upload, build info, download).
+
+// ---
+
+// ### Assumptions and Potential Issues
+// 1. **JFrog CLI Config**: The pipeline assumes the JFrog CLI has a pre-existing configuration (e.g., server URL, credentials) set via `jfrog config add`. If not, steps like `rt ping`, `rt u`, etc., will fail.
+//    - **Fix**: Add a `jf 'c add'` step with credentials if needed (e.g., using `withCredentials`).
+// 2. **Repository**: The `jfrog-cli/` target implies a repository named `jfrog-cli` or a path within a repo. If it doesn’t exist or isn’t specified in the config, the upload will fail.
+//    - **Fix**: Specify the repo explicitly, e.g., `jf 'rt u test-file my-repo/jfrog-cli/'`.
+// 3. **Build Info**: `rt bp` assumes build info is set. Without it, this step might silently do nothing or error out.
+//    - **Fix**: Set build info explicitly with `env.BUILD_NAME` and `env.BUILD_NUMBER` or use Jenkins’ Artifactory plugin.
+// 4. **Permissions**: The pipeline needs write/read access to the target Artifactory repo.
+
+// ---
+
+// ### Example with Fixes
+// Here’s a more robust version addressing these assumptions:
+
+// ```groovy
+// pipeline {
+//     agent any
+//     tools {
+//         jfrog 'jfrog-cli'
+//     }
+//     environment {
+//         BUILD_NAME = "Test-Build"
+//         BUILD_NUMBER = "${env.BUILD_NUMBER}"
+//     }
+//     stages {
+//         stage('Testing') {
+//             steps {
+//                 withCredentials([usernamePassword(credentialsId: 'artifactory-creds', usernameVariable: 'JFROG_USER', passwordVariable: 'JFROG_TOKEN')]) {
+//                     sh '''
+//                         jf config add my-artifactory --url=https://myartifactory.com --user=$JFROG_USER --password=$JFROG_TOKEN
+//                         jf config use my-artifactory
+//                     '''
+//                     jf '-v'
+//                     jf 'c show'
+//                     jf 'rt ping'
+//                     sh 'touch test-file'
+//                     jf 'rt u test-file my-repo/jfrog-cli/'
+//                     jf 'rt bp'
+//                     jf 'rt dl my-repo/jfrog-cli/test-file'
+//                 }
+//             }
+//         }
+//     }
+// }
+// ```
+
+// ---
+
+// ### Summary
+// This pipeline is a basic test harness for JFrog Artifactory integration. It:
+// - Validates the JFrog CLI setup.
+// - Uploads a test file to Artifactory.
+// - Publishes build info.
+// - Downloads the file back.
+// It’s simple but assumes a configured environment. With minor tweaks (e.g., explicit config, repo names), it could be a starting point for real artifact management workflows.
