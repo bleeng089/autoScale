@@ -92,37 +92,6 @@ pipeline{
 
 
 
-
-
-Let’s break down this Jenkins pipeline step-by-step to understand what it’s doing. This pipeline integrates with JFrog Artifactory using the JFrog CLI, performs some basic operations, and interacts with an Artifactory repository. Here’s the detailed explanation:
-
----
-
-### Pipeline Structure
-```groovy
-pipeline {
-    agent any
-    tools {
-        jfrog 'jfrog-cli'
-    }
-    stages {
-        stage('Testing') {
-            steps {
-                jf '-v'
-                jf 'c show'
-                jf 'rt ping'
-                sh 'touch test-file'
-                jf 'rt u test-file jfrog-cli/'
-                jf 'rt bp'
-                jf 'rt dl jfrog-cli/test-file'
-            }
-        }
-    }
-}
-
-
-
-
 // ### Breakdown of Each Section
 
 // #### 1. `agent any`
