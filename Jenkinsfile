@@ -7,7 +7,6 @@ pipeline {
     environment {
         AWS_REGION = 'us-east-1' // env variable
     }
-    }
     parameters {
         booleanParam(name: 'DESTROY', defaultValue: false, description: 'Set to true to destroy resources')
     }
