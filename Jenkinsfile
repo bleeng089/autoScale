@@ -3,6 +3,7 @@ pipeline {
     tools {
         jfrog 'jfrog-cli'
         snyk 'Snyk-tool'
+        terraform 'terraform-cli'
     }
     environment {
         AWS_REGION = 'us-east-1' // env variable
@@ -23,6 +24,8 @@ pipeline {
                         // Export the Snyk token from Jenkins credentials as an environment variable in this shell process  
                         // Scans files in the current directory, captures JSON output to snyk-report.json file & fails pipeline if vulnerabilities are found
                         sh '''
+                        echo "PATH is: $PATH" # trying to debug issue with path variable for the Snyk bianary
+                        snyk --version || echo "Snyk not found" 
                         export SNYK_TOKEN=${SNYK_TOKEN}
                         snyk test --json > snyk-report.json || true  
                         '''
