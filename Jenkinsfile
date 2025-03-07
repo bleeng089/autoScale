@@ -2,7 +2,6 @@ pipeline {
     agent any
     tools {
         jfrog 'jfrog-cli'
-        snyk 'Snyk-tool'
         terraform 'terraform-cli'
     }
     environment {
