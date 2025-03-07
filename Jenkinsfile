@@ -31,11 +31,14 @@ pipeline {
                         // Export the Snyk token from Jenkins credentials as an environment variable in this shell process  
                         // Scans files in the current directory, captures JSON output to snyk-report.json file & fails pipeline if vulnerabilities are found
                         sh '''
-                        export PATH=/var/jenkins_home/tools:$PATH  # Add manual Snyk install directory to PATH
-                        echo "PATH is: $PATH" # trying to debug issue with path variable for the Snyk bianary
-                        snyk --version || echo "Snyk not found" 
-                        export SNYK_TOKEN=${SNYK_TOKEN}
-                        snyk test --json > snyk-report.json || true  
+                            echo "Installing Snyk..."
+                            curl -L https://github.com/snyk/snyk/releases/latest/download/snyk-linux -o /tmp/snyk
+                            chmod +x /tmp/snyk
+                            export PATH=$PATH:/tmp
+                            echo "PATH is: $PATH"
+                            /tmp/snyk --version || echo "Snyk install failed"
+                            export SNYK_TOKEN=${SNYK_TOKEN}
+                            /tmp/snyk iac test --json > snyk-report.json || true
                         '''
                     }
                 }
