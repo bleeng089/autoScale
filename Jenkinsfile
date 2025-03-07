@@ -1,92 +1,126 @@
-// pipeline {
-//     agent any
-//     environment {
-//         AWS_REGION = 'us-east-1' 
-//     }
-//     stages {
-//         stage('Set AWS Credentials') {
-//             steps {
-//                 withCredentials([[
-//                     $class: 'AmazonWebServicesCredentialsBinding',
-//                     credentialsId: 'AWS' 
-//                 ]]) {
-//                     sh '''
-//                     echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-//                     aws sts get-caller-identity
-//                     '''
-//                 }
-//             }
-//         }
-//         stage('Checkout Code') {
-//             steps {
-//                 git branch: 'main', url: 'https://github.com/Bassdanger/autoScale' 
-//             }
-//         }
-//         stage('Initialize Terraform') {
-//             steps {
-//                 sh '''
-//                 terraform init
-//                 '''
-//             }
-//         }
-//         stage('Plan Terraform') {
-//             steps {
-//                 withCredentials([[
-//                     $class: 'AmazonWebServicesCredentialsBinding',
-//                     credentialsId: 'AWS'
-//                 ]]) {
-//                     sh '''
-//                     export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-//                     export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-//                     terraform plan -out=tfplan
-//                     '''
-//                 }
-//             }
-//         }
-//         stage('Apply Terraform') {
-//             steps {
-//                 input message: "Approve Terraform Apply?", ok: "Deploy"
-//                 withCredentials([[
-//                     $class: 'AmazonWebServicesCredentialsBinding',
-//                     credentialsId: 'AWS'
-//                 ]]) {
-//                     sh '''
-//                     export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-//                     export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-//                     terraform apply -auto-approve tfplan
-//                     '''
-//                 }
-//             }
-//         }
-//     }
-//     post {
-//         success {
-//             echo 'Terraform deployment completed successfully!'
-//         }
-//         failure {
-//             echo 'Terraform deployment failed!'
-//         }
-//     }
-// }
-pipeline{
+pipeline {
     agent any
     tools {
-        jfrog 'jfrog-cli'
+        jfrog 'jfrog-cli',
+        snyk 'Snyk-tool'
     }
+    environment {
+        AWS_REGION = 'us-east-1' // env variable
+    }
+
+
     stages {
-        stage ('Testing') {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
+            }
+        }
+        // stage('Snyk Security Scan') {
+        //     steps {
+        //         script {
+        //             // Use withCredentials to access the snyk token
+        //             withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+        //                 // Export the Snyk token from Jenkins credentials as an environment variable in this shell process  
+        //                 // Scans files in the current directory and fails the step if the Snyk scan detects issues or errors
+        //                 sh '''
+        //                 export SNYK_TOKEN=${SNYK_TOKEN}
+        //                 snyk test --json > snyk-report.json || { echo "Snyk scan failed"; exit 1; } 
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }
+        stage('Snyk Security Scan') {
+            steps {
+        // Run Snyk scan using the plugin, referencing the token directly
+                snykSecurity(
+                    snykInstallation: 'Snyk',
+                    snykTokenId: 'snyk-token',
+                    severity: 'high',
+                    outputFormat: 'json',
+                    outputFile: 'snyk-report.json'
+                )
+            }
+        }
+        stage ('Jfrog') {
             steps {
                 jf '-v' 
                 jf 'c show'
                 jf 'rt ping'
-                sh 'touch test-file'
-                jf 'rt u test-file  jfrog-remote-repo/'
+                // sh 'touch test-file'
+                jf 'rt u snyk-report.json  jfrog-remote-repo/' 
                 jf 'rt bp'
-                jf 'rt dl  jfrog-remote-repo/test-file'
+                jf 'rt dl  jfrog-remote-repo/snyk-report.json'
             }
         } 
+        stage('Initialize Terraform') {
+            steps {
+                // Use withCredentials to access the AWS credentials
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS-Key']]) {
+                    sh '''
+                        export AWS_DEFAULT_REGION=$AWS_REGION
+                        terraform init
+                    '''
+                }
+            }
+        }
+        stage('Plan Terraform') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS-Key']]) {
+                    sh '''
+                        export AWS_DEFAULT_REGION=$AWS_REGION
+                        terraform plan -out=tfplan
+                    '''
+                }
+            }
+        }
+        stage('Apply Terraform') {
+            steps {
+                input message: "Approve Terraform Apply?", ok: "Deploy"
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS-Key']]) {
+                    sh '''
+                        export AWS_DEFAULT_REGION=$AWS_REGION
+                        terraform apply -auto-approve tfplan
+                    '''
+                }
+            }
+        }
+        stage('Destroy Terraform') {
+            when {
+                expression { params.DESTROY == 'true' }
+            }
+            steps {
+                input message: "Approve Terraform Destroy? This will delete all resources!", ok: "Destroy"
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS-Key']]) {
+                    sh '''
+                        export AWS_DEFAULT_REGION=$AWS_REGION
+                        terraform destroy -auto-approve
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Terraform operation completed successfully!'
+        }
+        failure {
+            echo 'Terraform operation failed!'
+        }
+        always {
+            cleanWs()  // Deletes all files and directories in the workspace directory allocated for the pipeline run. This reduces the risk of sensitive data lingering on the agent.
+        }
+    }
+    parameters {
+        booleanParam(name: 'DESTROY', defaultValue: false, description: 'Set to true to destroy resources')
     }
 }
+
+
+
+
+    
+    
 
 
 
