@@ -16,6 +16,14 @@ pipeline {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
             }
         }
+    stages {
+        stage('Setup Tools') {
+            steps {
+                sh '''
+                    uname -a # Debug agent architecture
+                '''
+            }
+        }
         stage('Snyk Security Scan') {
             steps {
                 script {
