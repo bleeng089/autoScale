@@ -19,7 +19,7 @@ pipeline {
             steps {
                 script {
                     // Use withCredentials to access the snyk token
-                    withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'Snyk-token', variable: 'SNYK_TOKEN')]) {
                         // Export the Snyk token from Jenkins credentials as an environment variable in this shell process  
                         // Scans files in the current directory, captures JSON output to snyk-report.json file & fails pipeline if vulnerabilities are found
                         sh '''
