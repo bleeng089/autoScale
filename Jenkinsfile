@@ -71,7 +71,7 @@ pipeline {
         }
         stage('Apply Terraform') {
             when {
-                expression { params.DESTROY == 'false' }  // Only "terraform apply" if DESTROY parameter is false
+                expression { params.DESTROY == false }  // Only "terraform apply" if DESTROY parameter is false
             }
             steps {
                 input message: "Approve Terraform Apply?", ok: "Deploy"
@@ -85,7 +85,7 @@ pipeline {
         }
         stage('Destroy Terraform') {
             when {
-                expression { params.DESTROY == 'true' } // Only "terraform destroy" if DESTROY parameter is true
+                expression { params.DESTROY == true } // Only "terraform destroy" if DESTROY parameter is true
             }
             steps {
                 input message: "Approve Terraform Destroy? This will delete all resources!", ok: "Destroy"
