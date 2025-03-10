@@ -3,7 +3,6 @@ pipeline {
     tools {
         jfrog 'jfrog-cli'
         terraform 'terraform-cli'
-        hudson.plugins.sonar.SonarRunnerInstallation 'Install SonarScanner instance'
     }
     environment {
         AWS_REGION = 'us-east-1' // env variable
@@ -22,8 +21,9 @@ pipeline {
         stage ('SonarQube Scanner') {
             steps {
                 script {
+                    def scannerHome = tool 'Install SonarScanner instance' // Name of SonarQube Scanner in Jenkins manage/configureTools
                     sh '''
-                        ${tool 'SonarCloud Scanner'}/bin/sonar-scanner \
+                        ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=bleeng089 \
                         -Dsonar.organization=AWSUltramarine \
                         -Dsonar.host.url=${env.SONAR_HOST_URL} \
