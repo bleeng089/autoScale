@@ -21,13 +21,14 @@ pipeline {
         stage ('SonarQube Scanner') {
             steps {
                 script {
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'sonar-token')]) {
                     def scannerHome = tool 'Install SonarScanner instance' // Name of SonarQube Scanner in Jenkins manage/configureTools
                     sh """
                         ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=bleeng089 \
                         -Dsonar.organization=AWSUltramarine \
                         -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                        -Dsonar.login=${env.sonar-token} \
+                        -Dsonar.login=${sonar-token} \
                         -Dsonar.report.export.path=sonar-report.json
                     """ , returnStatus: true
 
