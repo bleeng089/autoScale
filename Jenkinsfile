@@ -3,9 +3,11 @@ pipeline {
     tools {
         jfrog 'jfrog-cli'
         terraform 'terraform-cli'
+        SonarQube Scanner 'Install SonarScanner instance'
     }
     environment {
         AWS_REGION = 'us-east-1' // env variable
+        SONAR_HOST_URL = 'https://sonarcloud.io'
     }
     parameters {
         booleanParam(name: 'DESTROY', defaultValue: true, description: 'Set to true to destroy resources')
@@ -17,6 +19,42 @@ pipeline {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
             }
         }
+        stage (SonarQube Scanner)
+            steps {
+                script {
+                    sh '''
+                        ${tool 'SonarCloud Scanner'}/bin/sonar-scanner \
+                        -Dsonar.projectKey=bleeng089 \
+                        -Dsonar.organization=AWSUltramarine \
+                        -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                        -Dsonar.login=${env.sonar-token} \
+                        -Dsonar.report.export.path=sonar-report.json
+                    ''' , returnStatus: true
+
+                    if (scanStatus != 0) {
+                        echo "SonarScanner detected issues, fetching details..."
+                        def sonarIssues = sh(script: '''
+                            curl -s -u ${env.sonar-token}: \
+                            "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
+                        ''', returnStdout: true).trim()
+
+                        if (!sonarIssues.contains("No issues found")) {
+                            def issueDescription = """ 
+                                **SonarCloud Security Issues:**
+                                ${sonarIssues}
+                            """.stripIndent()
+
+                            echo issueDescription
+                            error("Critical security issues found! Failing the build.")
+                        } else {
+                            echo "No critical or blocker issues found."
+                        }
+                        } else {
+                        echo "SonarScanner completed successfully with no issues."
+                        }
+                    }
+                }
+            }
         stage('Snyk Security Scan') {
             steps {
                 script {
@@ -43,7 +81,8 @@ pipeline {
                 jf 'c show'
                 jf 'rt ping'
                 // sh 'touch test-file'
-                jf 'rt u snyk-report.json  jfrog-remote-repo/' 
+                jf 'rt u snyk-report.json  jfrog-remote-repo/'
+                jf 'rt u sonar-report.json  jfrog-remote-repo/' 
                 jf 'rt bp'
                 jf 'rt dl  jfrog-remote-repo/snyk-report.json'
             }
