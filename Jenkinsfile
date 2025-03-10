@@ -3,7 +3,7 @@ pipeline {
     tools {
         jfrog 'jfrog-cli'
         terraform 'terraform-cli'
-        SonarQube 'Install SonarScanner instance'
+        SonarQubeScanner 'Install SonarScanner instance'
     }
     environment {
         AWS_REGION = 'us-east-1' // env variable
@@ -19,7 +19,7 @@ pipeline {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
             }
         }
-        stage ('SonarQube') {
+        stage ('SonarQubeScanner') {
             steps {
                 script {
                     sh '''
