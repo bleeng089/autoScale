@@ -17,27 +17,22 @@ pipeline {
         stage('Setup Dependencies') {
             steps {
                 script {
-                    echo "Checking and installing dependencies..."
-
-                    // Install Java 17 if required. This is needed for SonarQube
+                    // Validate tools
                     sh '''
-                        if ! java -version 2>&1 | grep -q "17"; then
-                            echo "Installing Java 17..."
-                            sudo apt update
-                            sudo apt install -y openjdk-17-jdk || sudo yum install -y java-17-openjdk-devel
-                        else
-                            echo "Java 17 is already installed."
+                        echo "Checking required tools..."
+                        if ! command -v java >/dev/null; then
+                            echo "Java not found! Please install Java 17."
+                            exit 1
                         fi
-                    '''
 
-                    // Install jq if required. Used to process the JSON data returned from an API call (curl) made to SonarQube/SonarCloud.
-                    sh '''
                         if ! command -v jq >/dev/null; then
-                            echo "Installing jq..."
-                            sudo apt update
-                            sudo apt install -y jq || sudo yum install -y jq
-                        else
-                            echo "jq is already installed."
+                            echo "jq not found! Installing jq..."
+                            sudo apt update && sudo apt install -y jq || sudo yum install -y jq
+                        fi
+
+                        if ! command -v curl >/dev/null; then
+                            echo "curl not found! Please install curl."
+                            exit 1
                         fi
                     '''
                 }
