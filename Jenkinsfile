@@ -12,7 +12,38 @@ pipeline {
         booleanParam(name: 'DESTROY', defaultValue: true, description: 'Set to true to destroy resources')
     }
 
+
     stages {
+        stage('Setup Dependencies') {
+            steps {
+                script {
+                    echo "Checking and installing dependencies..."
+
+                    // Install Java 17 if required. This is needed for SonarQube
+                    sh '''
+                        if ! java -version 2>&1 | grep -q "17"; then
+                            echo "Installing Java 17..."
+                            sudo apt update
+                            sudo apt install -y openjdk-17-jdk || sudo yum install -y java-17-openjdk-devel
+                        else
+                            echo "Java 17 is already installed."
+                        fi
+                    '''
+
+                    // Install jq if required. Used to process the JSON data returned from an API call (curl) made to SonarQube/SonarCloud.
+                    sh '''
+                        if ! command -v jq >/dev/null; then
+                            echo "Installing jq..."
+                            sudo apt update
+                            sudo apt install -y jq || sudo yum install -y jq
+                        else
+                            echo "jq is already installed."
+                        fi
+                    '''
+                }
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
@@ -28,11 +59,12 @@ pipeline {
                         // Execute SonarScanner with proper syntax
                         def scanStatus = sh(
                             script: """
+                                export SONAR_TOKEN=${SONAR_TOKEN}
                                 ${scannerHome}/bin/sonar-scanner \
                                 -Dsonar.projectKey=bleeng089 \
                                 -Dsonar.organization=AWSUltramarine \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
-                                -Dsonar.login=${SONAR_TOKEN} \
+                                -Dsonar.login=\${SONAR_TOKEN} \
                                 -Dsonar.report.export.path=sonar-report.json
                             """,
                             returnStatus: true // Correct placement
@@ -43,7 +75,7 @@ pipeline {
                             echo "SonarScanner detected issues, fetching details..."
                             def sonarIssues = sh(
                                 script: """
-                                    curl -s -u ${SONAR_TOKEN}: \
+                                    curl -s -u \${SONAR_TOKEN}: \
                                     "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
                                 """,
                                 returnStdout: true // Fetch the output as a string
