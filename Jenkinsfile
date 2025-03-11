@@ -130,7 +130,7 @@ pipeline {
                 // sh 'touch test-file'
                 jf 'rt u snyk-report.json  jfrog-remote-repo/'
                 jf 'rt u sonar-report.json  jfrog-remote-repo/' 
-                jf 'rt bp my-build ${env.BUILD_NUMBER}' //adds meta data to snyk & sonar reports
+                jf "rt bp my-build ${env.BUILD_NUMBER}" //adds meta data to snyk & sonar reports
             }
         }
 
