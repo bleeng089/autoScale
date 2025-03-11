@@ -21,21 +21,21 @@ pipeline {
         stage ('SonarQube Scanner') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'sonar-token')]) {
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         def scannerHome = tool 'Install SonarScanner instance' // Name of SonarQube Scanner in Jenkins manage/configureTools
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=bleeng089 \
                             -Dsonar.organization=AWSUltramarine \
                             -Dsonar.host.url=${SONAR_HOST_URL} \
-                            -Dsonar.login=${sonar-token} \
+                            -Dsonar.login=${SONAR_TOKEN} \
                             -Dsonar.report.export.path=sonar-report.json
                         """ , returnStatus: true
 
                         if (scanStatus != 0) {
                             echo "SonarScanner detected issues, fetching details..."
                             def sonarIssues = sh(script: '''
-                                curl -s -u ${sonar-token}: \
+                                curl -s -u ${SONAR_TOKEN}: \
                                 "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
                             ''', returnStdout: true).trim()
 
