@@ -3,6 +3,7 @@ pipeline {
     tools {
         jfrog 'jfrog-cli'
         terraform 'terraform-cli'
+        jdk "java-install" // Java JDK install tool
     }
     environment {
         AWS_REGION = 'us-east-1' // env variable
@@ -13,50 +14,7 @@ pipeline {
     }
 
 
-        stages {
-            script {
-                // Install dependencies dynamically in the build
-                sh '''
-                    echo "Checking and installing dependencies..."
-
-                    # Check and install Java 17
-                    if ! java -version 2>&1 | grep -q "17"; then
-                        echo "Java 17 not found! Installing..."
-                        if command -v apt >/dev/null; then
-                            apt update && apt install -y openjdk-17-jdk
-                        elif command -v yum >/dev/null; then
-                            yum install -y java-17-openjdk-devel
-                        else
-                            echo "No supported package manager found! Exiting."
-                            exit 1
-                        fi
-                    else
-                        echo "Java 17 is already installed."
-                    fi
-
-                    # Check and install jq
-                    if ! command -v jq >/dev/null; then
-                        echo "jq not found! Installing..."
-                        if command -v apt >/dev/null; then
-                            apt update && apt install -y jq
-                        elif command -v yum >/dev/null; then
-                            yum install -y jq
-                        else
-                            echo "No supported package manager found! Exiting."
-                            exit 1
-                        fi
-                    else
-                        echo "jq is already installed."
-                    fi
-
-                    # Verify installations
-                    java -version
-                    jq --version
-                '''
-            }
-        }
-    
-
+     stages {
         stage('Checkout Code') {
             steps {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
@@ -82,22 +40,28 @@ pipeline {
                             """,
                             returnStatus: true // Correct placement
                         )
-
                         // Process scan results
                         if (scanStatus != 0) {
                             echo "SonarScanner detected issues, fetching details..."
+
+                            // Use Groovy's JsonSlurper to parse the JSON response
                             def sonarIssues = sh(
                                 script: """
                                     curl -s -u \${SONAR_TOKEN}: \
-                                    "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
+                                    "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN"
                                 """,
-                                returnStdout: true // Fetch the output as a string
+                                returnStdout: true // Fetch the JSON response as a string
                             ).trim()
 
-                            if (!sonarIssues.contains("No issues found")) {
+                            def jsonSlurper = new groovy.json.JsonSlurper()
+                            def issuesResponse = jsonSlurper.parseText(sonarIssues)
+
+                            // Extract issue messages from the JSON response
+                            if (issuesResponse.issues && !issuesResponse.issues.isEmpty()) {
+                                def issueMessages = issuesResponse.issues.collect { it.message }.join("\n")
                                 def issueDescription = """ 
                                     **SonarCloud Security Issues:**
-                                    ${sonarIssues}
+                                    ${issueMessages}
                                 """.stripIndent()
 
                                 echo issueDescription
@@ -112,6 +76,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Snyk Security Scan') {
             steps {
