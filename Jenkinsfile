@@ -35,7 +35,7 @@ pipeline {
                         if (scanStatus != 0) {
                             echo "SonarScanner detected issues, fetching details..."
                             def sonarIssues = sh(script: '''
-                                curl -s -u ${env.sonar-token}: \
+                                curl -s -u ${sonar-token}: \
                                 "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
                             ''', returnStdout: true).trim()
 
