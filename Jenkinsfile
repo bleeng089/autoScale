@@ -39,7 +39,6 @@ pipeline {
                                 -Dsonar.organization=bleeng089 \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
                                 -Dsonar.login=\${SONAR_TOKEN} \
-                                -Dsonar.report.export.path=sonar-report.json
                             """,
                             returnStatus: true // Correct placement
                         )
@@ -80,6 +79,25 @@ pipeline {
             }
         }
 
+        stage('Fetch SonarCloud Results and Upload to JFrog') {
+            steps {
+                script {
+                    // Use withCredentials to access the Sonar token securely
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                        // Fetch Sonar results using curl
+                        def sonarResults = sh(
+                            script: """
+                                curl -s -u "${SONAR_TOKEN}:" \
+                                "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089_AWSUltramarine" > sonar-results.json
+                            """,
+                            returnStatus: true // Ensure we proceed even if there are no issues
+                        )
+                        echo "SonarQube results: "
+                        sh 'cat sonar-results.json'
+                    }
+                }
+            }
+        }
 
         stage('Snyk Security Scan') {
             steps {
@@ -95,12 +113,15 @@ pipeline {
                             export PATH=$PATH:/tmp
                             /tmp/snyk --version || echo "Snyk install failed"
                             export SNYK_TOKEN=${SNYK_TOKEN}
-                            /tmp/snyk iac test --json > snyk-report.json 
+                            /tmp/snyk iac test --json > snyk-report.json
+                            echo "Snyk results: "
+                            cat snyk-report.json 
                         '''
                     }
                 }
             }
         }
+
         stage ('Jfrog') {
             steps {
                 jf '-v' 
@@ -109,10 +130,10 @@ pipeline {
                 // sh 'touch test-file'
                 jf 'rt u snyk-report.json  jfrog-remote-repo/'
                 jf 'rt u sonar-report.json  jfrog-remote-repo/' 
-                jf 'rt bp'
-                jf 'rt dl  jfrog-remote-repo/snyk-report.json'
+                jf 'rt bp --build-name my-build --build-number ${env.BUILD_NUMBER}'
             }
-        } 
+        }
+
         stage('Initialize Terraform') {
             steps {
                 // Use withCredentials to access the AWS credentials
