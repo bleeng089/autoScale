@@ -21,7 +21,7 @@ pipeline {
         stage ('SonarQube Scanner') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) { // variable should always = 'SONAR_TOKEN' in withCredentials
                         def scannerHome = tool 'Install SonarScanner instance' // Name of SonarQube Scanner in Jenkins manage/configureTools
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
