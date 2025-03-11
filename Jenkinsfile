@@ -3,7 +3,6 @@ pipeline {
     tools {
         jfrog 'jfrog-cli'
         terraform 'terraform-cli'
-        jdk "java-install" // Java JDK install tool
     }
     environment {
         AWS_REGION = 'us-east-1' // env variable
