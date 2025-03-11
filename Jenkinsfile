@@ -13,31 +13,49 @@ pipeline {
     }
 
 
-    stages {
-        stage('Setup Dependencies') {
-            steps {
-                script {
-                    // Validate tools
-                    sh '''
-                        echo "Checking required tools..."
-                        if ! command -v java >/dev/null; then
-                            echo "Java not found! Please install Java 17."
+        stages {
+            script {
+                // Install dependencies dynamically in the build
+                sh '''
+                    echo "Checking and installing dependencies..."
+
+                    # Check and install Java 17
+                    if ! java -version 2>&1 | grep -q "17"; then
+                        echo "Java 17 not found! Installing..."
+                        if command -v apt >/dev/null; then
+                            apt update && apt install -y openjdk-17-jdk
+                        elif command -v yum >/dev/null; then
+                            yum install -y java-17-openjdk-devel
+                        else
+                            echo "No supported package manager found! Exiting."
                             exit 1
                         fi
+                    else
+                        echo "Java 17 is already installed."
+                    fi
 
-                        if ! command -v jq >/dev/null; then
-                            echo "jq not found! Installing jq..."
-                            sudo apt update && sudo apt install -y jq || sudo yum install -y jq
-                        fi
-
-                        if ! command -v curl >/dev/null; then
-                            echo "curl not found! Please install curl."
+                    # Check and install jq
+                    if ! command -v jq >/dev/null; then
+                        echo "jq not found! Installing..."
+                        if command -v apt >/dev/null; then
+                            apt update && apt install -y jq
+                        elif command -v yum >/dev/null; then
+                            yum install -y jq
+                        else
+                            echo "No supported package manager found! Exiting."
                             exit 1
                         fi
-                    '''
-                }
+                    else
+                        echo "jq is already installed."
+                    fi
+
+                    # Verify installations
+                    java -version
+                    jq --version
+                '''
             }
         }
+    
 
         stage('Checkout Code') {
             steps {
