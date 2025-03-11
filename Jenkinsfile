@@ -93,7 +93,7 @@ pipeline {
                             returnStatus: true // Ensure we proceed even if there are no issues
                         )
                         echo "SonarQube results: "
-                        sh 'cat sonar-results.json'
+                        sh 'cat sonar-report.json'
                     }
                 }
             }
