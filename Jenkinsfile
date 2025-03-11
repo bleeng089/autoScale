@@ -35,8 +35,8 @@ pipeline {
                             script: """
                                 export SONAR_TOKEN=${SONAR_TOKEN}
                                 ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=bleeng089 \
-                                -Dsonar.organization=AWSUltramarine \
+                                -Dsonar.projectKey=bleeng089_AWSUltramarine \
+                                -Dsonar.organization=bleeng089 \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
                                 -Dsonar.login=\${SONAR_TOKEN} \
                                 -Dsonar.report.export.path=sonar-report.json
