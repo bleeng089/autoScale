@@ -7,7 +7,11 @@ pipeline {
     environment {
         AWS_REGION = 'us-east-1' // env variable
         SONAR_HOST_URL = 'https://sonarcloud.io'
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64' 
+        PATH = "${JAVA_HOME}/bin:${env.PATH}" //Sets path to Java 17 for SonarQube
     }
+
+
     parameters {
         booleanParam(name: 'DESTROY', defaultValue: true, description: 'Set to true to destroy resources')
     }
