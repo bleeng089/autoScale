@@ -21,41 +21,45 @@ pipeline {
         stage ('SonarQube Scanner') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'SONARQUBE_TOKEN_ID', variable: 'SONAR_TOKEN')]) 
-                    def scannerHome = tool 'Install SonarScanner instance' // Name of SonarQube Scanner in Jenkins manage/configureTools
-                    sh """
-                        ${scannerHome}/bin/sonar-scanner \
-                        -Dsonar.projectKey=bleeng089 \
-                        -Dsonar.organization=AWSUltramarine \
-                        -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                        -Dsonar.login=${env.sonar-token} \
-                        -Dsonar.report.export.path=sonar-report.json
-                    """ , returnStatus: true
+                    withCredentials([string(credentialsId: 'SONARQUBE_TOKEN_ID', variable: 'SONAR_TOKEN')]) {
+                        def scannerHome = tool 'Install SonarScanner instance' // Name of SonarQube Scanner in Jenkins manage/configureTools
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=bleeng089 \
+                            -Dsonar.organization=AWSUltramarine \
+                            -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                            -Dsonar.login=${env.sonar-token} \
+                            -Dsonar.report.export.path=sonar-report.json
+                        """ , returnStatus: true
 
-                    if (scanStatus != 0) {
-                        echo "SonarScanner detected issues, fetching details..."
-                        def sonarIssues = sh(script: '''
-                            curl -s -u ${env.sonar-token}: \
-                            "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
-                        ''', returnStdout: true).trim()
+                        if (scanStatus != 0) {
+                            echo "SonarScanner detected issues, fetching details..."
+                            def sonarIssues = sh(script: '''
+                                curl -s -u ${env.sonar-token}: \
+                                "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089&severities=BLOCKER,CRITICAL&statuses=OPEN" | jq -r '.issues[].message' || echo "No issues found"
+                            ''', returnStdout: true).trim()
 
-                        if (!sonarIssues.contains("No issues found")) {
-                            def issueDescription = """ 
-                                **SonarCloud Security Issues:**
-                                ${sonarIssues}
-                            """.stripIndent()
+                            if (!sonarIssues.contains("No issues found")) {
+                                def issueDescription = """ 
+                                    **SonarCloud Security Issues:**
+                                    ${sonarIssues}
+                                """.stripIndent()
 
-                            echo issueDescription
-                            error("Critical security issues found! Failing the build.")
-                        } else {
-                            echo "No critical or blocker issues found."
-                        }
-                        } else {
-                        echo "SonarScanner completed successfully with no issues."
-                        }
+                                echo issueDescription
+                                error("Critical security issues found! Failing the build.")
+                            } else {
+                                echo "No critical or blocker issues found."
+                            }
+                            } else {
+                            echo "SonarScanner completed successfully with no issues."
+                            }
+                    
                     }
                 }
+                
             }
+            
+        }
         stage('Snyk Security Scan') {
             steps {
                 script {
