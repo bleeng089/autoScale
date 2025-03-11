@@ -88,7 +88,7 @@ pipeline {
                         def sonarResults = sh(
                             script: """
                                 curl -s -u "${SONAR_TOKEN}:" \
-                                "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089_AWSUltramarine" > sonar-results.json
+                                "https://sonarcloud.io/api/issues/search?componentKeys=bleeng089_AWSUltramarine" > sonar-report.json
                             """,
                             returnStatus: true // Ensure we proceed even if there are no issues
                         )
