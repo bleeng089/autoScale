@@ -18,7 +18,7 @@ pipeline {
 
 
      stages {
-        stage('Checkout Code') {
+        /*stage('Checkout Code') {
             steps {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
             }
@@ -131,9 +131,9 @@ pipeline {
                 jf 'rt u sonar-report.json  jfrog-remote-repo/' 
                 jf "rt bp my-build ${env.BUILD_NUMBER}" //adds meta data to snyk & sonar reports
             }
-        }
+        }*/
 
-        /*stage ("Docker Pull Dastardly from Burp Suite container image") {
+        stage ("Docker Pull Dastardly from Burp Suite container image") {
             steps {
                 sh 'docker pull public.ecr.aws/portswigger/dastardly:latest'
             }
@@ -148,9 +148,9 @@ pipeline {
                     public.ecr.aws/portswigger/dastardly:latest
                 '''
             }
-        }*/
+        }
 
-        stage('Initialize Terraform') {
+        /*stage('Initialize Terraform') {
             steps {
                 // Use withCredentials to access the AWS credentials
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS-Key']]) {
@@ -198,7 +198,7 @@ pipeline {
                     '''
                 }
             }
-        }
+        }*/
     }
     post {
         success {
@@ -207,9 +207,9 @@ pipeline {
         failure {
             echo 'Terraform operation failed!'
         }
-        /*always {
+        always {
             junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
-        }*/
+        }
         always {
             cleanWs()  // Deletes all files and directories in the workspace directory allocated for the pipeline run. This reduces the risk of sensitive data lingering on the agent.
         }
