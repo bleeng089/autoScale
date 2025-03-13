@@ -149,7 +149,7 @@ pipeline {
                 '''
             }
         }*/
-        
+
         stage('Initialize Terraform') {
             steps {
                 // Use withCredentials to access the AWS credentials
@@ -207,9 +207,9 @@ pipeline {
         failure {
             echo 'Terraform operation failed!'
         }
-        always {
+        /*always {
             junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
-        }
+        }*/
         always {
             cleanWs()  // Deletes all files and directories in the workspace directory allocated for the pipeline run. This reduces the risk of sensitive data lingering on the agent.
         }
