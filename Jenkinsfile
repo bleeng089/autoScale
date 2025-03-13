@@ -143,10 +143,11 @@ pipeline {
                 cleanWs()
                 sh 'chmod 777 ${WORKSPACE}'
                 sh '''
-                    docker run -v ${WORKSPACE}:${WORKSPACE}:rw \
+                    docker run \
                     -e BURP_START_URL=https://ginandjuice.shop/ \
-                    -e BURP_REPORT_FILE_PATH=${WORKSPACE}/dastardly-report.xml \
+                    -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
                     public.ecr.aws/portswigger/dastardly:latest
+                    docker cp $(docker ps -lq):/tmp/dastardly-report.xml ${WORKSPACE}/dastardly-report.xml
                 '''
             }
         }
