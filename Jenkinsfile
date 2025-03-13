@@ -18,29 +18,7 @@ pipeline {
 
 
      stages {
-        stage('Check Agent') {
-            steps {
-                sh '''
-                    echo "Agent details:"
-                    uname -a
-                    cat /etc/os-release || echo "No /etc/os-release found"
-                '''
-            }
-        }
-
-        stage('Debug Terraform') {
-            steps {
-                sh '''
-                    echo "Checking Terraform setup..."
-                    echo "PATH is: $PATH"
-                    which terraform || echo "Terraform not found in PATH"
-                    terraform --version || echo "Terraform failed to run"
-                    ls -l $(which terraform) || echo "Cannot list Terraform binary"
-                '''
-            }
-        }
-
-        /*stage('Checkout Code') {
+        stage('Checkout Code') {
             steps {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
             }
@@ -155,7 +133,7 @@ pipeline {
             }
         }
 
-        stage ("Docker Pull Dastardly from Burp Suite container image") {
+        /*stage ("Docker Pull Dastardly from Burp Suite container image") {
             steps {
                 sh 'docker pull public.ecr.aws/portswigger/dastardly:latest'
             }
@@ -170,14 +148,8 @@ pipeline {
                     public.ecr.aws/portswigger/dastardly:latest
                 '''
             }
-        }
-    }
-    post {
-        always {
-            junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
-        }
-    }
-
+        }*/
+        
         stage('Initialize Terraform') {
             steps {
                 // Use withCredentials to access the AWS credentials
@@ -226,7 +198,7 @@ pipeline {
                     '''
                 }
             }
-        }*/
+        }
     }
     post {
         success {
@@ -234,6 +206,9 @@ pipeline {
         }
         failure {
             echo 'Terraform operation failed!'
+        }
+        always {
+            junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
         }
         always {
             cleanWs()  // Deletes all files and directories in the workspace directory allocated for the pipeline run. This reduces the risk of sensitive data lingering on the agent.
