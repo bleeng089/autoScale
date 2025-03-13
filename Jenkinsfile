@@ -39,8 +39,8 @@ pipeline {
                 '''
             }
         }
-/*
-        stage('Checkout Code') {
+
+        /*stage('Checkout Code') {
             steps {
                 git branch: 'jfrog', url: 'https://github.com/bleeng089/autoScale.git'
             }
@@ -154,7 +154,7 @@ pipeline {
                 jf "rt bp my-build ${env.BUILD_NUMBER}" //adds meta data to snyk & sonar reports
             }
         }
-/*
+
         stage ("Docker Pull Dastardly from Burp Suite container image") {
             steps {
                 sh 'docker pull public.ecr.aws/portswigger/dastardly:latest'
@@ -171,7 +171,7 @@ pipeline {
                 '''
             }
         }
-    }*/
+    }
     post {
         always {
             junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
@@ -226,7 +226,7 @@ pipeline {
                     '''
                 }
             }
-        }
+        }*/
     }
     post {
         success {
