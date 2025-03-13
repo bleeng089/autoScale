@@ -209,8 +209,6 @@ pipeline {
         }
         always {
             junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
-        }
-        always {
             cleanWs()  // Deletes all files and directories in the workspace directory allocated for the pipeline run. This reduces the risk of sensitive data lingering on the agent.
         }
     }
