@@ -141,6 +141,7 @@ pipeline {
         stage ("Docker run Dastardly from Burp Suite Scan") {
             steps {
                 cleanWs()
+                sh 'chmod 777 ${WORKSPACE}'
                 sh '''
                     docker run -v ${WORKSPACE}:${WORKSPACE}:rw \
                     -e BURP_START_URL=https://ginandjuice.shop/ \
