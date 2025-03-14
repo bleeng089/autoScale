@@ -144,7 +144,7 @@ pipeline {
                 cleanWs()
                 sh '''
                     # Run Dastardly in detached mode and capture container ID
-                    container_id=$(docker run -d \
+                    container_id=$(docker run \
                         -e BURP_START_URL=https://example.com \
                         -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
                         public.ecr.aws/portswigger/dastardly:latest)
@@ -152,12 +152,12 @@ pipeline {
                     # Wait for completion, cap at 300 seconds
                     # timeout 300 docker wait $container_id || docker stop $container_id
                     
-                    # Print to std out
-                    cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
-                    
                     # Copy report to workspace
                     docker cp $container_id:/tmp/dastardly-report.xml ${WORKSPACE}/dastardly-report.xml || echo "No report generated"
-                    
+
+                    # Print to std out
+                    cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
+                                     
                     # Clean up
                     docker rm $container_id
                     
