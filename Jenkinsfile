@@ -144,7 +144,7 @@ pipeline {
                 sh '''
                     # Run Dastardly in detached mode and capture container ID
                     container_id=$(docker run -d \
-                        -e BURP_START_URL=https://example.com \
+                        -e BURP_START_URL=https://ginandjuice.shop \
                         -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
                         public.ecr.aws/portswigger/dastardly:latest)
                     # Wait for completion, cap at 300 seconds
