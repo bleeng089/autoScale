@@ -142,7 +142,7 @@ pipeline {
             steps {
                 cleanWs()
                 sh '''
-                    container_id=(docker run \
+                    container_id=(docker run -d \
                     -e BURP_START_URL=https://example.com \
                     -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
                     public.ecr.aws/portswigger/dastardly:latest)
