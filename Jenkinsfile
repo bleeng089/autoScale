@@ -141,12 +141,11 @@ pipeline {
         stage ("Docker run Dastardly from Burp Suite Scan") {
             steps {
                 cleanWs()
-                sh 'chmod 777 ${WORKSPACE}'
                 sh '''
-                    docker run \
-                    -e BURP_START_URL=https://example.com/ \
+                    container_id=(docker run \
+                    -e BURP_START_URL=https://example.com \
                     -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
-                    public.ecr.aws/portswigger/dastardly:latest
+                    public.ecr.aws/portswigger/dastardly:latest)
                     # Wait up to 120 seconds, then kill if still running
                     # timeout 120 docker wait $container_id || docker stop $container_id
                     # Copy report regardless of exit status
