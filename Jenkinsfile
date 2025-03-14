@@ -138,29 +138,23 @@ pipeline {
                 sh 'docker pull public.ecr.aws/portswigger/dastardly:latest'
             }
         }
-
         stage ("Docker run Dastardly from Burp Suite Scan") {
             steps {
                 cleanWs()
                 sh '''
                     # Run Dastardly in detached mode and capture container ID
                     container_id=$(docker run -d \
-                        -e BURP_START_URL=https://ginandjuice.shop/ \
+                        -e BURP_START_URL=https://example.com \
                         -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
                         public.ecr.aws/portswigger/dastardly:latest)
-                    
                     # Wait for completion, cap at 300 seconds
                     timeout 300 docker wait $container_id || docker stop $container_id
-                    
                     # Copy report
                     docker cp $container_id:/tmp/dastardly-report.xml ${WORKSPACE}/dastardly-report.xml || echo "No report generated"
-                    
                     # Print to stdout
                     cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
-                    
                     # Clean up
                     docker rm $container_id
-                    
                     # Verify output
                     ls -l ${WORKSPACE}
                 '''
