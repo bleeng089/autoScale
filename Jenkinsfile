@@ -143,26 +143,21 @@ pipeline {
             steps {
                 cleanWs()
                 sh '''
-                    container_id=$(docker run \
+                    # Run Dastardly with volume mount to write report directly
+                    docker run \
                         -e BURP_START_URL=https://example.com \
-                        -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
-                        public.ecr.aws/portswigger/dastardly:latest)
+                        -e BURP_REPORT_FILE_PATH=${WORKSPACE}/dastardly-report.xml \
+                        -v ${WORKSPACE}:${WORKSPACE}:rw \
+                        public.ecr.aws/portswigger/dastardly:latest
                     
-                    # Copy report to workspace
-                    docker cp $container_id:/tmp/dastardly-report.xml ${WORKSPACE}/dastardly-report.xml || echo "No report generated"
-
-                    # Print to std out
+                    # Print to stdout
                     cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
-                                     
-                    # Clean up
-                    #docker rm $container_id
                     
                     # Verify output
                     ls -l ${WORKSPACE}
                 '''
             }
         }
-
 
         /*stage('Initialize Terraform') {
             steps {
