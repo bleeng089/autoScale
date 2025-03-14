@@ -143,7 +143,6 @@ pipeline {
             steps {
                 cleanWs()
                 sh '''
-                    # Run Dastardly in detached mode and capture container ID
                     container_id=$(docker run \
                         -e BURP_START_URL=https://example.com \
                         -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
