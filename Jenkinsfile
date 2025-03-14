@@ -143,8 +143,7 @@ pipeline {
             steps {
                 cleanWs()
                 sh '''
-                    # Run Dastardly in detached mode and capture container ID
-                    container_id=$(docker run -d \
+                    container_id=$(docker run \
                         -e BURP_START_URL=https://example.com \
                         -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
                         public.ecr.aws/portswigger/dastardly:latest)
@@ -156,7 +155,7 @@ pipeline {
                     cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
                                      
                     # Clean up
-                    docker rm $container_id
+                    #docker rm $container_id
                     
                     # Verify output
                     ls -l ${WORKSPACE}
