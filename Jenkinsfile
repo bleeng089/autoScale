@@ -149,9 +149,10 @@ pipeline {
                         public.ecr.aws/portswigger/dastardly:latest)
                     # Wait for completion, cap at 300 seconds
                     timeout 300 docker wait $container_id || docker stop $container_id
-                    # Print to std out
-                    cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
+                    # Copy report
                     docker cp $container_id:/tmp/dastardly-report.xml ${WORKSPACE}/dastardly-report.xml || echo "No report generated"
+                    # Print to stdout
+                    cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
                     # Clean up
                     docker rm $container_id
                     # Verify output
