@@ -138,25 +138,35 @@ pipeline {
                 sh 'docker pull public.ecr.aws/portswigger/dastardly:latest'
             }
         }
+
         stage ("Docker run Dastardly from Burp Suite Scan") {
             steps {
                 cleanWs()
                 sh '''
-                    container_id=(docker run -d \
-                    -e BURP_START_URL=https://example.com \
-                    -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
-                    public.ecr.aws/portswigger/dastardly:latest)
-                    # Wait up to 120 seconds, then kill if still running
-                    # timeout 120 docker wait $container_id || docker stop $container_id
-                    # Copy report regardless of exit status
-                    docker cp $container_id:/tmp/dastardly-report.xml ${WORKSPACE}/dastardly-report.xml || echo "No report generated"
-                    # Print to stdout 
+                    # Run Dastardly in detached mode and capture container ID
+                    container_id=$(docker run -d \
+                        -e BURP_START_URL=https://example.com \
+                        -e BURP_REPORT_FILE_PATH=/tmp/dastardly-report.xml \
+                        public.ecr.aws/portswigger/dastardly:latest)
+                        
+                    # Wait for completion, cap at 300 seconds
+                    # timeout 300 docker wait $container_id || docker stop $container_id
+                    
+                    # Print to std out
                     cat ${WORKSPACE}/dastardly-report.xml || echo "Failed to print report"
+                    
+                    # Copy report to workspace
+                    docker cp $container_id:/tmp/dastardly-report.xml ${WORKSPACE}/dastardly-report.xml || echo "No report generated"
+                    
+                    # Clean up
                     docker rm $container_id
+                    
+                    # Verify output
                     ls -l ${WORKSPACE}
                 '''
             }
         }
+
 
         /*stage('Initialize Terraform') {
             steps {
